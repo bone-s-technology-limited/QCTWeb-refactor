@@ -1,7 +1,6 @@
 FROM node:18.16.1-slim as builder
 
 
-
 # 首先复制并构建 cornerstone tools
 COPY ./cornerstone3D_QCTWeb /usr/src/app/cornerstone3D_QCTWeb
 WORKDIR /usr/src/app/cornerstone3D_QCTWeb

@@ -7,7 +7,20 @@ import Icon from '../Icon';
 
 const StudyListTableRow = props => {
   const { tableData } = props;
-  const { row, expandedContent, onClickRow, isExpanded, dataCY, clickableCY } = tableData;
+  const {
+    row,
+    expandedContent,
+    onClickRow,
+    isExpanded,
+    dataCY,
+    clickableCY,
+    // Button click handlers
+    onViewReport,
+    onViewDetails,
+    // Add a new prop to identify if this is a sequence row
+    isSequenceRow,
+  } = tableData;
+
   return (
     <>
       <tr
@@ -44,6 +57,7 @@ const StudyListTableRow = props => {
                   onClick={onClickRow}
                   data-cy={clickableCY}
                 >
+                  {/* Display row data */}
                   {row.map((cell, index) => {
                     const { content, title, gridCol } = cell;
                     return (
@@ -77,10 +91,43 @@ const StudyListTableRow = props => {
                       </td>
                     );
                   })}
+
+                  {/* Only show action buttons for study rows (non-sequence rows) */}
+                  {!isSequenceRow && (
+                    <td
+                      className={classnames('px-4 py-2 text-base', {
+                        'border-secondary-light border-b': !isExpanded,
+                      })}
+                    >
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={e => {
+                            e.stopPropagation(); // Prevent row expansion when clicking the button
+                            onViewReport && onViewReport();
+                          }}
+                          className="bg-primary-main hover:bg-primary-light whitespace-nowrap rounded py-1 px-3 font-bold text-white"
+                        >
+                          骨密度测量
+                        </button>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation(); // Prevent row expansion when clicking the button
+                            onViewDetails && onViewDetails();
+                          }}
+                          className="bg-secondary-main hover:bg-secondary-light whitespace-nowrap rounded py-1 px-3 font-bold text-white"
+                        >
+                          查看报告
+                        </button>
+                      </div>
+                    </td>
+                  )}
+
+                  {/* Don't render any action column for sequence rows */}
+                  {isSequenceRow && null}
                 </tr>
                 {isExpanded && (
                   <tr className="max-h-0 w-full select-text overflow-hidden bg-black">
-                    <td colSpan={row.length}>{expandedContent}</td>
+                    <td colSpan={row.length + (isSequenceRow ? 0 : 1)}>{expandedContent}</td>
                   </tr>
                 )}
               </tbody>
@@ -110,7 +157,19 @@ StudyListTableRow.propTypes = {
     isExpanded: PropTypes.bool.isRequired,
     dataCY: PropTypes.string,
     clickableCY: PropTypes.string,
+    // Button handlers
+    onViewReport: PropTypes.func,
+    onViewDetails: PropTypes.func,
+    // New prop to identify sequence rows
+    isSequenceRow: PropTypes.bool,
   }),
+};
+
+// Default props
+StudyListTableRow.defaultProps = {
+  tableData: {
+    isSequenceRow: false, // Default to false, meaning it's a study row with buttons
+  },
 };
 
 export default StudyListTableRow;

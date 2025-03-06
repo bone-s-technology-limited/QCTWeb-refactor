@@ -41,6 +41,18 @@ const StudyListFilter = ({
                 >
                   {t('StudyList')}
                 </Typography>
+
+                {/* 添加一键分析按钮 */}
+                <LegacyButton
+                  variant="outlined"
+                  color="primaryActive"
+                  border="primaryActive"
+                  className="ml-4"
+                  onClick={() => console.log('一键分析按钮被点击')}
+                >
+                  一键分析
+                </LegacyButton>
+
                 {getDataSourceConfigurationComponent && getDataSourceConfigurationComponent()}
                 {onUploadClick && (
                   <div
@@ -71,7 +83,7 @@ const StudyListFilter = ({
                   variant="h6"
                   className="text-primary-light"
                 >
-                  {`${t('Number of studies')}: `}
+                  {`${t('Number of studies')}: `}
                 </Typography>
                 <Typography
                   variant="h6"
@@ -99,7 +111,9 @@ const StudyListFilter = ({
         {numOfStudies > 100 && (
           <div className="container m-auto">
             <div className="bg-primary-main rounded-b py-1 text-center text-base">
-              <p className="text-white">{t('Filter list to 100 studies or less to enable sorting')}</p>
+              <p className="text-white">
+                {t('Filter list to 100 studies or less to enable sorting')}
+              </p>
             </div>
           </div>
         )}
