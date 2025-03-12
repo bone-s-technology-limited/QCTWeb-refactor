@@ -419,8 +419,12 @@ function PanelMeasurementTableTracking({
         printDate: formatDate(new Date().toISOString()),
       };
 
-      const hospitalInfoResponse = await FS.readFile('hospital_info.json', { encoding: 'utf8' });
-      const hospitalInfoDefault = JSON.parse(hospitalInfoResponse);
+      const hospitalInfoDefault = {
+        Title: '福建省南平市第一医院',
+        Address: '福建省南平市延平区中山路317号',
+        Department: '放射科',
+        Doctor: '李华',
+      };
 
       const hospitalInfo = {
         Title: customizationService?.get('hospitalName') || hospitalInfoDefault.Title,

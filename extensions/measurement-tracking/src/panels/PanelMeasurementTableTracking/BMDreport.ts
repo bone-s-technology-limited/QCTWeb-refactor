@@ -18,7 +18,22 @@ import html2canvas from 'html2canvas';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-const BMDReport = ({ measurements, patientInfo, scanParams }) => {
+// Update the component props interface
+interface BMDReportProps {
+  measurements: any;
+  patientInfo: any;
+  scanParams: any;
+  hospitalInfo?: any; // Make hospitalInfo optional
+  chartOptions?: any;
+}
+
+const BMDReport = ({
+  measurements,
+  patientInfo,
+  scanParams,
+  hospitalInfo,
+  chartOptions,
+}: BMDReportProps) => {
   const safeNumberFormat = (value, decimals = 1) => {
     const number = parseFloat(value);
     return !isNaN(number) ? number.toFixed(decimals) : '0';
@@ -466,125 +481,154 @@ export const convertBMDReportToPDF = async (
 ) => {
   console.log('Starting PDF generation');
 
+  // 创建临时容器，确保足够大的尺寸以容纳完整内容
   const tempContainer = document.createElement('div');
   tempContainer.style.position = 'absolute';
   tempContainer.style.left = '-9999px';
-  tempContainer.style.width = '1000px';
-  tempContainer.style.display = 'block';
+  tempContainer.style.width = '1000px'; // 固定宽度
+  tempContainer.style.backgroundColor = '#FFFFFF';
   document.body.appendChild(tempContainer);
 
   return new Promise((resolve, reject) => {
-    const root = createRoot(tempContainer);
+    try {
+      const root = createRoot(tempContainer);
 
-    const staticChartOptions = {
-      ...defaultChartOptions,
-      animation: false,
-      responsive: true,
-      maintainAspectRatio: true,
-    };
-
-    console.log('Rendering component with static chart options');
-    root.render(
-      React.createElement(BMDReport, {
-        measurements,
-        patientInfo,
-        hospitalInfo,
-        scanParams,
-        chartOptions: staticChartOptions,
-      })
-    );
-
-    setTimeout(async () => {
-      try {
-        console.log('Converting to canvas...');
-        const canvas = await html2canvas(tempContainer, {
-          scale: 1.75, // 略微提高scale以提升清晰度
-          useCORS: true,
-          logging: true,
-          height: tempContainer.scrollHeight,
-          width: tempContainer.scrollWidth,
-          backgroundColor: '#FFFFFF',
-          imageTimeout: 15000,
-          onclone: clonedDoc => {
-            console.log('Document cloned');
-            const chartElement = clonedDoc.querySelector('.chart-container canvas');
-            console.log('Chart element found:', !!chartElement);
-            if (!chartElement) {
-              console.log(
-                'Chart container structure:',
-                clonedDoc.querySelector('.chart-container')?.innerHTML
-              );
-            }
+      // 使用静态图表配置，禁用动画以确保正确渲染
+      const staticChartOptions = {
+        ...defaultChartOptions,
+        animation: false,
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          ...defaultChartOptions.plugins,
+          // 确保Chart.js组件正确渲染
+          legend: {
+            ...defaultChartOptions.plugins.legend,
+            display: true,
           },
-        });
+        },
+      };
 
-        console.log('Creating PDF...');
-        // 使用较高质量的JPEG格式，但仍保持合理的压缩率
-        const imgData = canvas.toDataURL('image/jpeg', 0.85);
+      console.log('Rendering BMD Report component');
+      root.render(
+        React.createElement(BMDReport, {
+          measurements,
+          patientInfo,
+          hospitalInfo,
+          scanParams,
+          chartOptions: staticChartOptions,
+        })
+      );
 
-        const pdf = new jsPDF({
-          orientation: 'p',
-          unit: 'pt',
-          format: 'a4',
-          compress: true,
-          putOnlyUsedFonts: true,
-        });
+      // 增加延迟时间，确保图表完全渲染
+      setTimeout(async () => {
+        try {
+          // 确认组件已渲染
+          if (!tempContainer.firstChild) {
+            throw new Error('Component did not render correctly');
+          }
 
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-        const imgX = (pdfWidth - imgWidth * ratio) / 2;
-        const imgY = 30;
+          console.log('Converting to canvas...');
+          // 使用更适合PDF的设置
+          const canvas = await html2canvas(tempContainer, {
+            scale: 2, // 更高的分辨率
+            useCORS: true, // 处理跨域资源
+            logging: true, // 启用日志
+            height: tempContainer.scrollHeight,
+            width: tempContainer.scrollWidth,
+            backgroundColor: '#FFFFFF', // 确保白色背景
+            imageTimeout: 30000, // 延长超时时间
+            windowWidth: 1000, // 确保一致的窗口宽度
+            windowHeight: tempContainer.scrollHeight,
+            onclone: clonedDoc => {
+              // 在克隆文档中检查和修复图表容器
+              const chartContainer = clonedDoc.querySelector('.chart-container') as HTMLElement;
+              if (chartContainer) {
+                console.log('Chart container found, ensuring visibility');
+                chartContainer.style.overflow = 'visible';
+                chartContainer.style.height = 'auto';
 
-        // 使用MEDIUM压缩级别，在质量和大小之间取得平衡
-        pdf.addImage(
-          imgData,
-          'JPEG',
-          imgX,
-          imgY,
-          imgWidth * ratio,
-          imgHeight * ratio,
-          undefined,
-          'MEDIUM'
-        );
+                // 确保canvas在克隆文档中可见
+                const canvasElements = clonedDoc.querySelectorAll('canvas');
+                canvasElements.forEach(canvas => {
+                  canvas.style.display = 'block';
+                  canvas.style.visibility = 'visible';
+                });
+              }
+            },
+          });
 
-        // 验证文件大小
-        const pdfBuffer = pdf.output('arraybuffer');
-        const fileSizeInKB = pdfBuffer.byteLength / 1024;
-        console.log('PDF size:', fileSizeInKB, 'KB');
+          console.log('Creating PDF...');
+          // 使用PDF固定尺寸以确保一致性
+          const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'pt',
+            format: 'a4',
+            compress: true,
+            putOnlyUsedFonts: true,
+          });
 
-        if (fileSizeInKB > 1024) {
-          // 如果超过1MB
-          console.warn('PDF size exceeds 1MB, applying additional compression');
-          // 如果文件过大，进行二次压缩
-          const imgDataCompressed = canvas.toDataURL('image/jpeg', 0.75);
-          pdf.deletePage(1);
-          pdf.addPage();
-          pdf.addImage(
-            imgDataCompressed,
-            'JPEG',
-            imgX,
-            imgY,
-            imgWidth * ratio,
-            imgHeight * ratio,
-            undefined,
-            'FAST'
-          );
+          // 计算适当的缩放比例
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          const imgWidth = canvas.width;
+          const imgHeight = canvas.height;
+          const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+
+          // 居中图像
+          const imgX = (pdfWidth - imgWidth * ratio) / 2;
+          const imgY = 30; // 从顶部留出一些空间
+
+          // 使用PNG格式以保持质量（避免JPEG压缩artifact）
+          const imgData = canvas.toDataURL('image/png', 1.0);
+
+          console.log('Adding image to PDF...');
+          pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+
+          // 验证文件大小
+          const pdfBuffer = pdf.output('arraybuffer');
+          const fileSizeInKB = pdfBuffer.byteLength / 1024;
+          console.log('PDF size:', fileSizeInKB, 'KB');
+
+          // 如果文件过大，应用更合适的压缩，但保持图像质量
+          if (fileSizeInKB > 1024) {
+            console.warn('PDF size exceeds 1MB, applying more efficient compression');
+            pdf.deletePage(1);
+            pdf.addPage();
+
+            // 使用JPEG但保持较高质量
+            const imgDataCompressed = canvas.toDataURL('image/jpeg', 0.9);
+            pdf.addImage(
+              imgDataCompressed,
+              'JPEG',
+              imgX,
+              imgY,
+              imgWidth * ratio,
+              imgHeight * ratio
+            );
+          }
+
+          console.log('PDF generation completed successfully');
+          // 清理
+          document.body.removeChild(tempContainer);
+          root.unmount();
+          resolve(pdf);
+        } catch (error) {
+          console.error('PDF generation failed during canvas/PDF creation:', error);
+          document.body.removeChild(tempContainer);
+          if (root) {
+            root.unmount();
+          }
+          reject(error);
         }
-
-        console.log('PDF generation completed');
+      }, 2500); // 增加延迟，确保图表完全渲染
+    } catch (error) {
+      console.error('PDF generation failed during initial setup:', error);
+      if (tempContainer.parentNode) {
         document.body.removeChild(tempContainer);
-        root.unmount();
-        resolve(pdf);
-      } catch (error) {
-        console.error('PDF generation failed:', error);
-        document.body.removeChild(tempContainer);
-        root.unmount();
-        reject(error);
       }
-    }, 1500);
+      reject(error);
+    }
   });
 };
 

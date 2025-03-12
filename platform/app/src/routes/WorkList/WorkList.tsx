@@ -525,7 +525,7 @@ function WorkList({
     customizationService.get('ohif.dataSourceConfigurationComponent') ?? {};
 
   return (
-    <div className="flex h-screen flex-col bg-black">
+    <div className="flex h-screen flex-col bg-[#0a0a24]">
       <Header
         isSticky
         menuOptions={menuOptions}

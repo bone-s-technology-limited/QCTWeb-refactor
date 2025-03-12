@@ -29,7 +29,7 @@ const StudyListTableRow = props => {
       >
         <td
           className={classnames('border-0 p-0', {
-            'border-secondary-light bg-primary-dark border-b': isExpanded,
+            'border-secondary-light bg-[#0a0a24]': isExpanded,
           })}
         >
           <div
@@ -50,9 +50,9 @@ const StudyListTableRow = props => {
                   className={classnames(
                     'hover:bg-secondary-main cursor-pointer transition duration-300',
                     {
-                      'bg-primary-dark': !isExpanded,
+                      'bg-[#0a0a24]': !isExpanded,
                     },
-                    { 'bg-secondary-dark': isExpanded }
+                    { 'bg-[#0a0a24]': isExpanded }
                   )}
                   onClick={onClickRow}
                   data-cy={clickableCY}
@@ -105,18 +105,9 @@ const StudyListTableRow = props => {
                             e.stopPropagation(); // Prevent row expansion when clicking the button
                             onViewReport && onViewReport();
                           }}
-                          className="bg-primary-main hover:bg-primary-light whitespace-nowrap rounded py-1 px-3 font-bold text-white"
+                          className="hover:bg-primary-light whitespace-nowrap rounded bg-[#2468CD] py-1 px-3 font-bold text-white"
                         >
                           骨密度测量
-                        </button>
-                        <button
-                          onClick={e => {
-                            e.stopPropagation(); // Prevent row expansion when clicking the button
-                            onViewDetails && onViewDetails();
-                          }}
-                          className="bg-secondary-main hover:bg-secondary-light whitespace-nowrap rounded py-1 px-3 font-bold text-white"
-                        >
-                          查看报告
                         </button>
                       </div>
                     </td>
@@ -126,7 +117,7 @@ const StudyListTableRow = props => {
                   {isSequenceRow && null}
                 </tr>
                 {isExpanded && (
-                  <tr className="max-h-0 w-full select-text overflow-hidden bg-black">
+                  <tr className="max-h-0 w-full select-text overflow-hidden bg-[#0a0a24]">
                     <td colSpan={row.length + (isSequenceRow ? 0 : 1)}>{expandedContent}</td>
                   </tr>
                 )}

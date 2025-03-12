@@ -25,28 +25,78 @@ function _getCurrentDateTime() {
   };
 }
 
+// 将ArrayBuffer转换为Base64字符串
+function arrayBufferToBase64(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+}
+
+// 确保对象可以安全转换为JSON
+function makeJSONSafe(obj) {
+  if (!obj) {
+    return obj;
+  }
+  if (obj instanceof ArrayBuffer) {
+    return {
+      _type: 'ArrayBuffer',
+      _byteLength: obj.byteLength,
+    };
+  }
+  if (typeof obj !== 'object') {
+    return obj;
+  }
+
+  const newObj = Array.isArray(obj) ? [] : {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      newObj[key] = makeJSONSafe(obj[key]);
+    }
+  }
+  return newObj;
+}
+
 function getDICOMFromJSONDataset(dataset) {
-  console.log('getDICOMFromJSONDataset - Input dataset:', dataset);
+  console.log('getDICOMFromJSONDataset - 输入数据集:', makeJSONSafe(dataset));
   try {
-    // 验证 EncapsulatedDocument 是否是有效的 ArrayBuffer
-    if (!(dataset.EncapsulatedDocument instanceof ArrayBuffer)) {
-      throw new Error('EncapsulatedDocument must be an ArrayBuffer');
+    // 创建工作副本，避免修改原始对象
+    const workingDataset = { ...dataset };
+
+    // 恢复原始的ArrayBuffer，如果我们使用了特殊的对象结构
+    if (workingDataset._vrMap && workingDataset._vrMap.EncapsulatedDocument === 'OB') {
+      if (
+        workingDataset.EncapsulatedDocument &&
+        workingDataset.EncapsulatedDocument._pdfArrayBuffer
+      ) {
+        console.log('从_pdfArrayBuffer恢复ArrayBuffer数据用于DICOM文件创建');
+        workingDataset.EncapsulatedDocument = workingDataset.EncapsulatedDocument._pdfArrayBuffer;
+      }
     }
 
-    const denaturalizedMetaHeader = DicomMetaDictionary.denaturalizeDataset(dataset._meta);
+    // 确保元数据字段正确
+    if (!workingDataset._meta) {
+      throw new Error('数据集中缺少_meta');
+    }
+
+    const denaturalizedMetaHeader = DicomMetaDictionary.denaturalizeDataset(workingDataset._meta);
     const dicomDict = new DicomDict(denaturalizedMetaHeader);
-    dicomDict.dict = DicomMetaDictionary.denaturalizeDataset(dataset);
+    dicomDict.dict = DicomMetaDictionary.denaturalizeDataset(workingDataset);
 
-    const dicomBuffer = dicomDict.write({ fragmentMultiframe: false });
-    console.log('Generated DICOM buffer size:', dicomBuffer.byteLength);
+    // 使用正确的分片设置生成DICOM缓冲区
+    const dicomBuffer = dicomDict.write();
+    console.log('生成的DICOM缓冲区大小:', dicomBuffer.byteLength, '字节');
 
-    // 创建 DICOM 文件并保存
+    // 创建DICOM文件并保存
     const dicomBlob = new Blob([dicomBuffer], { type: 'application/dicom' });
     const url = window.URL.createObjectURL(dicomBlob);
     const a = document.createElement('a');
     a.href = url;
     const timestamp = new Date().getTime();
-    a.download = `encapsulated_pdf_${timestamp}.dcm`; //
+    a.download = `encapsulated_pdf_${timestamp}.dcm`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -54,45 +104,67 @@ function getDICOMFromJSONDataset(dataset) {
 
     return dicomBlob;
   } catch (error) {
-    console.error('getDICOMFromJSONDataset - Error:', error);
-    console.error('Error stack:', error.stack);
+    console.error('getDICOMFromJSONDataset - 错误:', error);
+    console.error('错误堆栈:', error.stack);
     throw error;
   }
 }
 
-function getJSONDatasetOfEncapsulatedPDF(pdfArrayBuffer: ArrayBuffer, instance) {
-  // 打印传入的PDF ArrayBuffer信息，查看是否正确传入
-  console.log('getJSONDatasetOfEncapsulatedPDF - Input pdfArrayBuffer:', pdfArrayBuffer);
-  // Generate Buffer
-  const pdfBinary = new Uint8Array(pdfArrayBuffer);
+function getJSONDatasetOfEncapsulatedPDF(pdfArrayBuffer, instance) {
+  console.log(
+    'getJSONDatasetOfEncapsulatedPDF - 输入pdfArrayBuffer类型:',
+    Object.prototype.toString.call(pdfArrayBuffer)
+  );
+  console.log(
+    'getJSONDatasetOfEncapsulatedPDF - 输入pdfArrayBuffer大小:',
+    pdfArrayBuffer.byteLength,
+    '字节'
+  );
 
-  // 打印生成的pdfBinary信息，查看转换是否正确
-  console.log('getJSONDatasetOfEncapsulatedPDF - Generated pdfBinary:', pdfBinary);
-  // Create dataset dates and times
+  // 确保pdfArrayBuffer是正确的类型
+  if (!(pdfArrayBuffer instanceof ArrayBuffer)) {
+    throw new Error('PDF数据必须是ArrayBuffer类型');
+  }
+
+  // 检查PDF头部以确认是有效的PDF
+  const pdfHeader = new Uint8Array(pdfArrayBuffer.slice(0, 5));
+  const isPDF = String.fromCharCode.apply(null, pdfHeader) === '%PDF-';
+  if (!isPDF) {
+    console.warn('警告: 输入数据似乎不是有效的PDF (没有找到%PDF-头)');
+  }
+
+  // 创建日期时间
   const dateTime = _getCurrentDateTime();
 
-  // Generate UIDs
+  // 生成UIDs
   const seriesInstanceUid = DicomMetaDictionary.uid();
   const sopInstanceUid = DicomMetaDictionary.uid();
 
-  // Pad PDF buffer
-  let pdfBuffer = pdfBinary;
-  if (pdfBuffer.length & 1) {
-    const paddedBuffer = new Uint8Array(pdfBuffer.length + 1);
-    paddedBuffer.set(pdfBuffer);
-    paddedBuffer[pdfBuffer.length] = 0x00;
-    pdfBuffer = paddedBuffer;
+  // 确保PDF数据长度为偶数（DICOM要求）
+  let pdfData = pdfArrayBuffer;
+  const pdfSize = pdfArrayBuffer.byteLength;
+  if (pdfSize % 2 !== 0) {
+    console.log('PDF大小为奇数字节，添加填充...');
+    const paddedBuffer = new ArrayBuffer(pdfSize + 1);
+    const paddedView = new Uint8Array(paddedBuffer);
+    paddedView.set(new Uint8Array(pdfArrayBuffer));
+    paddedView[pdfSize] = 0x00; // 添加填充字节
+    pdfData = paddedBuffer;
   }
 
-  // 打印处理后的pdfBuffer信息，查看填充等操作后是否符合预期
-  console.log('getJSONDatasetOfEncapsulatedPDF - Processed pdfBuffer:', pdfBuffer);
-  // 打印处理后的pdfBuffer大小（字节数）
-  console.log(
-    'getJSONDatasetOfEncapsulatedPDF - Processed pdfBuffer size (bytes):',
-    pdfBuffer.byteLength
-  );
+  // 创建Blob和URL用于直接访问PDF
+  const pdfBlob = new Blob([pdfData], { type: 'application/pdf' });
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  console.log('创建的PDF URL:', pdfUrl);
 
-  // Extract necessary information from previous instance
+  // 转换为Base64以用于InlineBinary
+  const base64PDF = arrayBufferToBase64(pdfData);
+  console.log('创建的Base64 PDF长度:', base64PDF.length);
+
+  // 保存原始ArrayBuffer以便后续处理
+  const originalBuffer = pdfData.slice(0);
+
+  // 构建完整的DICOM数据集
   const dataset = {
     _vrMap: {
       EncapsulatedDocument: 'OB',
@@ -106,93 +178,141 @@ function getJSONDatasetOfEncapsulatedPDF(pdfArrayBuffer: ArrayBuffer, instance) 
       ImplementationClassUID: ImplementationUid,
     },
 
-    // Patient
-    PatientID: instance.PatientID,
-    PatientName: instance.PatientName,
-    PatientBirthDate: instance.PatientBirthDate,
-    PatientSex: instance.PatientSex,
+    // 必需的Patient属性
+    PatientID: instance.PatientID || '',
+    PatientName: instance.PatientName || '',
+    PatientBirthDate: instance.PatientBirthDate || '',
+    PatientSex: instance.PatientSex || '',
 
-    // Study
-    StudyInstanceUID: instance.StudyInstanceUID,
+    // 必需的Study属性
+    StudyInstanceUID: instance.StudyInstanceUID || DicomMetaDictionary.uid(),
     StudyDate: dateTime.date,
     StudyTime: dateTime.time,
-    StudyID: instance.StudyID,
-    ReferringPhysicianName: instance.ReferringPhysicianName,
+    StudyID: instance.StudyID || '',
+    AccessionNumber: instance.AccessionNumber || '',
+    ReferringPhysicianName: instance.ReferringPhysicianName || '',
+    StudyDescription: instance.StudyDescription || 'BMD Report',
 
-    // Encapsulated Document
+    // 必需的Series属性
     Modality: 'DOC',
     SeriesInstanceUID: seriesInstanceUid,
+    SeriesNumber: instance.SeriesNumber ? parseInt(instance.SeriesNumber) + 1 : 1,
+    SeriesDate: dateTime.date,
+    SeriesTime: dateTime.time,
+    SeriesDescription: 'BMD Report PDF',
 
+    // 文档属性
     ContentDate: dateTime.date,
     ContentTime: dateTime.time,
-    // DocumentTitle: '',
+    DocumentTitle: 'BMD Report',
+    ConceptNameCodeSequence: [
+      {
+        CodeValue: '18748-4',
+        CodingSchemeDesignator: 'LN',
+        CodeMeaning: 'Diagnostic imaging report',
+      },
+    ],
     MIMETypeOfEncapsulatedDocument: 'application/pdf',
-    EncapsulatedDocument: pdfBuffer.buffer,
+    // 设置为ArrayBuffer用于dcmjs转换
+    EncapsulatedDocument: pdfData,
+    BurnedInAnnotation: 'YES',
 
+    // 添加实例相关属性
     SOPClassUID: EncapsulatedPdfSopClassUid,
     SOPInstanceUID: sopInstanceUid,
-    SpecificCharacterSet: 'ISO_IR 100',
+    InstanceNumber: 1,
+    SpecificCharacterSet: 'ISO_IR 192', // UTF-8
+
+    // 添加图像注释信息
+    Manufacturer: 'OHIF Viewer',
+    ManufacturerModelName: 'BMD Reporting System',
   };
 
-  // 打印生成的数据集信息，查看构造是否正确
-  console.log('getJSONDatasetOfEncapsulatedPDF - Generated dataset:', dataset);
-  // 打印生成的数据集的大小（字节数，这里简单估算，将各字段序列化后的长度总和，实际可能更复杂，仅供参考大致大小）
-  let datasetSize = 0;
-  for (const key in dataset) {
-    if (typeof dataset[key] === 'string') {
-      datasetSize += dataset[key].length;
-    } else if (Array.isArray(dataset[key])) {
-      for (const element of dataset[key]) {
-        if (typeof element === 'string') {
-          datasetSize += element.length;
-        } else if (element instanceof Uint8Array) {
-          datasetSize += element.byteLength;
-        }
-      }
-    } else if (dataset[key] instanceof Uint8Array) {
-      datasetSize += dataset[key].byteLength;
-    }
-  }
-  console.log('getJSONDatasetOfEncapsulatedPDF - Generated dataset size (bytes):', datasetSize);
+  console.log('成功生成带有完整元数据的数据集');
 
-  return dataset;
+  // 返回完整数据集和一些额外信息用于后续处理
+  return {
+    dataset,
+    pdfUrl,
+    base64PDF,
+    originalBuffer,
+    seriesInstanceUid,
+    sopInstanceUid,
+  };
 }
 
-function uploadPDF(pdf: jsPDF, dataSource, instance): void {
+function uploadPDF(pdf, dataSource, instance) {
   try {
-    // 获取 PDF 的 ArrayBuffer
+    console.log('开始PDF上传过程');
+
+    // 检查pdf对象是否有效
+    if (!pdf || typeof pdf.output !== 'function') {
+      throw new Error('无效的PDF对象');
+    }
+
+    // 检查instance对象是否有效
+    if (!instance || !instance.StudyInstanceUID) {
+      throw new Error('无效的DICOM实例对象');
+    }
+
+    // 获取PDF的ArrayBuffer，使用二进制格式以保证数据完整性
     const pdfArrayBuffer = pdf.output('arraybuffer');
-    console.log('PDF ArrayBuffer size:', pdfArrayBuffer.byteLength);
+    console.log('PDF ArrayBuffer大小:', pdfArrayBuffer.byteLength, '字节');
 
-    // 保存 PDF 文件
-    pdf.save('report.pdf');
+    // 转换为DICOM dataset及相关信息
+    const { dataset, pdfUrl, base64PDF, originalBuffer, seriesInstanceUid, sopInstanceUid } =
+      getJSONDatasetOfEncapsulatedPDF(pdfArrayBuffer, instance);
 
-    // 转换为 DICOM dataset
-    const dataset = getJSONDatasetOfEncapsulatedPDF(pdfArrayBuffer, instance);
-    console.log(
-      'Generated dataset EncapsulatedDocument type:',
-      dataset.EncapsulatedDocument.constructor.name
-    );
-
-    // 转换为 DICOM 文件
+    // 转换为DICOM文件
     const file = getDICOMFromJSONDataset(dataset);
 
     // 上传文件
+    console.log('开始DICOM文件上传');
     const fileUploader = new DicomFileUploader(file, dataSource);
     fileUploader
       .load()
       .then(() => {
-        console.log('Upload completed successfully');
-        alert('Upload completed');
-        DicomMetadataStore.addInstances([dataset], true);
+        console.log('上传成功完成');
+
+        try {
+          // 创建一个视图友好版本的实例对象用于UI显示
+          const viewFriendlyInstance = {
+            ...instance, // 保留原实例信息
+
+            // 更新为新生成的UID
+            SeriesInstanceUID: seriesInstanceUid,
+            SOPInstanceUID: sopInstanceUid,
+            SOPClassUID: EncapsulatedPdfSopClassUid,
+
+            // 添加必要的PDF相关属性
+            Modality: 'DOC',
+            SeriesDescription: 'BMD Report PDF',
+            MIMETypeOfEncapsulatedDocument: 'application/pdf',
+            DocumentTitle: 'BMD Report',
+
+            EncapsulatedDocument: {
+              DirectRetrieveURL: pdfUrl,
+              InlineBinary: base64PDF,
+            },
+          };
+
+          // 直接将修改后的实例添加到DicomMetadataStore
+          console.log('添加视图友好实例到DicomMetadataStore');
+          DicomMetadataStore.addInstances([viewFriendlyInstance], true);
+
+          alert('报告上传成功');
+        } catch (storeError) {
+          console.error('添加到DicomMetadataStore时出错:', storeError);
+          alert('报告上传成功，但显示可能存在问题');
+        }
       })
-      .catch((rejection: UploadRejection) => {
-        console.error('Upload failed:', rejection);
-        alert(`Upload failed: ${JSON.stringify(rejection)}`);
+      .catch(rejection => {
+        console.error('上传失败:', rejection);
+        alert(`上传失败: ${rejection.error || '未知错误'}`);
       });
   } catch (error) {
-    console.error('Error in uploadPDF:', error);
-    alert(`Error processing PDF: ${error.message}`);
+    console.error('uploadPDF中的错误:', error);
+    alert(`处理PDF时出错: ${error.message}`);
   }
 }
 

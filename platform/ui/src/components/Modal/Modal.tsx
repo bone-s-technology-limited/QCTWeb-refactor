@@ -58,8 +58,8 @@ const Modal = ({
       <section
         className={
           contentDimensions
-            ? `ohif-scrollbar bg-primary-dark overflow-y-auto ${contentDimensions}`
-            : 'ohif-scrollbar modal-content bg-primary-dark overflow-y-auto rounded-bl rounded-br px-[20px] pt-2 pb-[20px]'
+            ? `ohif-scrollbar overflow-y-auto bg-[#0a0a24] ${contentDimensions}`
+            : 'ohif-scrollbar modal-content overflow-y-auto rounded-bl rounded-br bg-[#0a0a24] px-[20px] pt-2 pb-[20px]'
         }
       >
         {children}

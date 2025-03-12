@@ -6,6 +6,7 @@
 
 .ohif-scrollbar-stable-gutter {
   scrollbar-gutter: stable;
+  background-color: #0a0a24;
 }
 
 .study-min-height {
@@ -26,13 +27,13 @@
 
 .ohif-scrollbar::-webkit-scrollbar-thumb {
   @apply rounded;
-  @apply bg-secondary-dark;
-  background-color: #041c4a;
+  @apply bg-[#0a0a24];
+  background-color: #0a0a24;
 }
 
 .ohif-scrollbar::-webkit-scrollbar-thumb:window-inactive {
-  @apply bg-secondary-dark;
-  background-color: #041c4a;
+  @apply bg-[#0a0a24];
+  background-color: #0a0a24;
 }
 
 /* INVISIBLE SCROLLBAR */

@@ -16,9 +16,7 @@ const rowStyle = {
 function ColumnHeaders({ tagRef, vrRef, keywordRef, valueRef }) {
   return (
     <div
-      className={classNames(
-        'bg-secondary-dark ohif-scrollbar flex w-full flex-row overflow-y-scroll'
-      )}
+      className={classNames('ohif-scrollbar flex w-full flex-row overflow-y-scroll bg-[#0a0a24]')}
       style={rowVerticalPaddingStyle}
     >
       <div className="w-4/24 px-3">
