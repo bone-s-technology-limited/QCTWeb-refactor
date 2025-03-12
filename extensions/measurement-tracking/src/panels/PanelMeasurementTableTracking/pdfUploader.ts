@@ -199,7 +199,7 @@ function getJSONDatasetOfEncapsulatedPDF(pdfArrayBuffer, instance) {
     SeriesNumber: instance.SeriesNumber ? parseInt(instance.SeriesNumber) + 1 : 1,
     SeriesDate: dateTime.date,
     SeriesTime: dateTime.time,
-    SeriesDescription: 'BMD Report PDF',
+    SeriesDescription: instance.PatientName + ' BMD Report',
 
     // 文档属性
     ContentDate: dateTime.date,
