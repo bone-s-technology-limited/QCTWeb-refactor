@@ -73,6 +73,9 @@ module.exports = (env, argv) => {
         path.resolve(__dirname, '../../../node_modules'),
         SRC_DIR,
         path.resolve(__dirname, 'D:/QCTWeb-main/modes/BMD-Calculation/node_modules'),
+        path.resolve(__dirname, 'E:/QCTWeb-refactor/modes/Auto-analysis/node_modules'),
+        path.resolve(__dirname, 'E:/QCTWeb-refactor/modes/Auto-analyze/node_modules'),
+        path.resolve(__dirname, 'E:/QCTWeb-refactor/modes/longitudinal/node_modules'),
       ],
     },
     plugins: [

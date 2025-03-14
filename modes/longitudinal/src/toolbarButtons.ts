@@ -41,6 +41,23 @@ export const setToolActiveToolbar = {
 };
 
 const toolbarButtons: Button[] = [
+  // AISegmentation 已被移到最前面（MeasurementTools前面）
+  {
+    id: 'AISegmentation',
+    uiType: 'ohif.radioGroup',
+    props: {
+      icon: 'clipboard',
+      label: 'AI分割',
+      tooltip: 'AI Segmentation',
+      commands: [
+        {
+          commandName: 'showAISegmentationDialog',
+          context: 'VIEWER',
+        },
+      ],
+      evaluate: 'evaluate.action',
+    },
+  },
   {
     id: 'MeasurementTools',
     uiType: 'ohif.splitButton',
@@ -131,21 +148,7 @@ const toolbarButtons: Button[] = [
       ],
     },
   },
-  // AI Segmentation Button
-  {
-    id: 'AISegmentation',
-    uiType: 'ohif.radioGroup',
-    props: {
-      icon: 'tool-segmentation', // Using existing segmentation icon, can be changed if needed
-      label: 'AI分割',
-      tooltip: 'AI Segmentation',
-      commands: {
-        commandName: 'showAISegmentationDialog', // Placeholder command, not yet implemented
-        commandOptions: {},
-      },
-      evaluate: 'evaluate.action',
-    },
-  },
+  // Zoom
   {
     id: 'Zoom',
     uiType: 'ohif.radioGroup',
@@ -215,8 +218,8 @@ const toolbarButtons: Button[] = [
     },
   },
   {
-    id: 'TrackBallRotate',
-    type: 'ohif.radioGroup',
+    id: 'TrackballRotate',
+    uiType: 'ohif.radioGroup',
     props: {
       type: 'tool',
       icon: 'tool-3d-rotate',
