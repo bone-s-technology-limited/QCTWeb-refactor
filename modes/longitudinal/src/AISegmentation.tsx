@@ -1,6 +1,5 @@
 import React from 'react';
 
-// 定义AI分割对话框组件，使用与系统一致的深蓝色主题，居中显示文字和按钮
 const AISegmentationDialog = ({
   onClose,
   onSubmit,
@@ -35,11 +34,10 @@ const AISegmentationDialog = ({
     }
   };
 
-  // 使用与OHIF系统匹配的深蓝色主题风格
   const containerStyle = {
     display: 'flex',
     flexDirection: 'column' as const,
-    backgroundColor: '#060C1F', // 深蓝色背景
+    backgroundColor: '#060C1F',
     color: '#ffffff',
     borderRadius: '4px',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',

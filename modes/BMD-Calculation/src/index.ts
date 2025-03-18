@@ -69,7 +69,7 @@ function modeFactory() {
     // We should not be.
     id,
     routeName: 'BMD Calculation',
-    displayName: 'BMD Calculation',
+    displayName: '手动分析',
     /**
      * Lifecycle hooks
      */

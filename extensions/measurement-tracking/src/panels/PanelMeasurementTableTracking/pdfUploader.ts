@@ -1,7 +1,5 @@
 import { data } from 'dcmjs';
-import DicomFileUploader, {
-  UploadRejection,
-} from '../../../../cornerstone/src/utils/DicomFileUploader';
+import DicomFileUploader from '../../../../cornerstone/src/utils/DicomFileUploader';
 import { DicomMetadataStore } from '@ohif/core';
 import jsPDF from 'jspdf';
 
@@ -60,56 +58,7 @@ function makeJSONSafe(obj) {
   return newObj;
 }
 
-function getDICOMFromJSONDataset(dataset) {
-  console.log('getDICOMFromJSONDataset - 输入数据集:', makeJSONSafe(dataset));
-  try {
-    // 创建工作副本，避免修改原始对象
-    const workingDataset = { ...dataset };
-
-    // 恢复原始的ArrayBuffer，如果我们使用了特殊的对象结构
-    if (workingDataset._vrMap && workingDataset._vrMap.EncapsulatedDocument === 'OB') {
-      if (
-        workingDataset.EncapsulatedDocument &&
-        workingDataset.EncapsulatedDocument._pdfArrayBuffer
-      ) {
-        console.log('从_pdfArrayBuffer恢复ArrayBuffer数据用于DICOM文件创建');
-        workingDataset.EncapsulatedDocument = workingDataset.EncapsulatedDocument._pdfArrayBuffer;
-      }
-    }
-
-    // 确保元数据字段正确
-    if (!workingDataset._meta) {
-      throw new Error('数据集中缺少_meta');
-    }
-
-    const denaturalizedMetaHeader = DicomMetaDictionary.denaturalizeDataset(workingDataset._meta);
-    const dicomDict = new DicomDict(denaturalizedMetaHeader);
-    dicomDict.dict = DicomMetaDictionary.denaturalizeDataset(workingDataset);
-
-    // 使用正确的分片设置生成DICOM缓冲区
-    const dicomBuffer = dicomDict.write();
-    console.log('生成的DICOM缓冲区大小:', dicomBuffer.byteLength, '字节');
-
-    // 创建DICOM文件并保存
-    const dicomBlob = new Blob([dicomBuffer], { type: 'application/dicom' });
-    const url = window.URL.createObjectURL(dicomBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    const timestamp = new Date().getTime();
-    a.download = `encapsulated_pdf_${timestamp}.dcm`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-
-    return dicomBlob;
-  } catch (error) {
-    console.error('getDICOMFromJSONDataset - 错误:', error);
-    console.error('错误堆栈:', error.stack);
-    throw error;
-  }
-}
-
+// 修改getJSONDatasetOfEncapsulatedPDF函数以确保兼容性
 function getJSONDatasetOfEncapsulatedPDF(pdfArrayBuffer, instance) {
   console.log(
     'getJSONDatasetOfEncapsulatedPDF - 输入pdfArrayBuffer类型:',
@@ -199,7 +148,7 @@ function getJSONDatasetOfEncapsulatedPDF(pdfArrayBuffer, instance) {
     SeriesNumber: instance.SeriesNumber ? parseInt(instance.SeriesNumber) + 1 : 1,
     SeriesDate: dateTime.date,
     SeriesTime: dateTime.time,
-    SeriesDescription: instance.PatientName + ' BMD Report',
+    SeriesDescription: 'BMD Report PDF',
 
     // 文档属性
     ContentDate: dateTime.date,
@@ -241,6 +190,60 @@ function getJSONDatasetOfEncapsulatedPDF(pdfArrayBuffer, instance) {
   };
 }
 
+// 修改getDICOMFromJSONDataset函数
+function getDICOMFromJSONDataset(dataset) {
+  console.log('getDICOMFromJSONDataset - 输入数据集:', makeJSONSafe(dataset));
+  try {
+    // 创建工作副本，避免修改原始对象
+    const workingDataset = { ...dataset };
+
+    // 恢复原始的ArrayBuffer，如果我们使用了特殊的对象结构
+    if (workingDataset._vrMap && workingDataset._vrMap.EncapsulatedDocument === 'OB') {
+      if (
+        workingDataset.EncapsulatedDocument &&
+        typeof workingDataset.EncapsulatedDocument === 'object' &&
+        !(workingDataset.EncapsulatedDocument instanceof ArrayBuffer)
+      ) {
+        console.error('EncapsulatedDocument不是ArrayBuffer类型，尝试修复');
+        // 由于已无法访问原始buffer，只能返回错误
+        throw new Error('EncapsulatedDocument格式不正确，无法创建DICOM文件');
+      }
+    }
+
+    // 确保元数据字段正确
+    if (!workingDataset._meta) {
+      throw new Error('数据集中缺少_meta');
+    }
+
+    const denaturalizedMetaHeader = DicomMetaDictionary.denaturalizeDataset(workingDataset._meta);
+    const dicomDict = new DicomDict(denaturalizedMetaHeader);
+    dicomDict.dict = DicomMetaDictionary.denaturalizeDataset(workingDataset);
+
+    // 使用正确的分片设置生成DICOM缓冲区
+    const dicomBuffer = dicomDict.write();
+    console.log('生成的DICOM缓冲区大小:', dicomBuffer.byteLength, '字节');
+
+    // 创建DICOM文件并保存
+    const dicomBlob = new Blob([dicomBuffer], { type: 'application/dicom' });
+    const url = window.URL.createObjectURL(dicomBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    const timestamp = new Date().getTime();
+    a.download = `encapsulated_pdf_${timestamp}.dcm`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    return dicomBlob;
+  } catch (error) {
+    console.error('getDICOMFromJSONDataset - 错误:', error);
+    console.error('错误堆栈:', error.stack);
+    throw error;
+  }
+}
+
+// 修改uploadPDF函数
 function uploadPDF(pdf, dataSource, instance) {
   try {
     console.log('开始PDF上传过程');
@@ -275,7 +278,7 @@ function uploadPDF(pdf, dataSource, instance) {
         console.log('上传成功完成');
 
         try {
-          // 创建一个视图友好版本的实例对象用于UI显示
+          // 创建一个与现有SOP Class Handler兼容的实例对象
           const viewFriendlyInstance = {
             ...instance, // 保留原实例信息
 
@@ -289,17 +292,37 @@ function uploadPDF(pdf, dataSource, instance) {
             SeriesDescription: 'BMD Report PDF',
             MIMETypeOfEncapsulatedDocument: 'application/pdf',
             DocumentTitle: 'BMD Report',
+            BurnedInAnnotation: 'YES',
 
             EncapsulatedDocument: {
-              DirectRetrieveURL: pdfUrl,
               InlineBinary: base64PDF,
+              DirectRetrieveURL: pdfUrl,
             },
+
+            // 添加序列和实例信息
+            SeriesNumber: instance.SeriesNumber ? parseInt(instance.SeriesNumber) + 1 : 1,
+            InstanceNumber: 1,
           };
+
+          // 向DicomMetadataStore添加实例前，确保它具有正确的检索信息
+          if (
+            dataSource &&
+            dataSource.retrieve &&
+            typeof dataSource.retrieve.directURL === 'function'
+          ) {
+            try {
+              // 我们不需要修改 directURL 方法，因为我们已经以 getDirectURL 预期的格式提供数据
+              console.log('不需要替换 directURL 方法，实例已按预期格式创建');
+            } catch (e) {
+              console.error('设置实例数据时出错:', e);
+            }
+          }
 
           // 直接将修改后的实例添加到DicomMetadataStore
           console.log('添加视图友好实例到DicomMetadataStore');
           DicomMetadataStore.addInstances([viewFriendlyInstance], true);
 
+          console.log('创建了可通过以下URL访问的PDF:', pdfUrl);
           alert('报告上传成功');
         } catch (storeError) {
           console.error('添加到DicomMetadataStore时出错:', storeError);

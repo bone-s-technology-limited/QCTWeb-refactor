@@ -12,7 +12,6 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import hospitalInfo from './hospital_info.json';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -633,93 +632,6 @@ export const convertBMDReportToPDF = async (
 };
 
 const defaultChartOptions = {
-  responsive: true,
-  maintainAspectRatio: true,
-  aspectRatio: 1.6,
-  animation: false,
-  layout: {
-    padding: {
-      left: 10,
-      right: 20,
-      top: 20,
-      bottom: 10,
-    },
-  },
-  plugins: {
-    legend: {
-      position: 'bottom',
-      align: 'start',
-      labels: {
-        boxWidth: 12,
-        padding: 15,
-        font: {
-          size: 12,
-        },
-        filter: item => item.text !== '',
-      },
-    },
-    tooltip: {
-      enabled: true,
-      mode: 'index',
-      intersect: false,
-      padding: 12,
-      titleFont: {
-        size: 14,
-      },
-      bodyFont: {
-        size: 13,
-      },
-    },
-  },
-  scales: {
-    y: {
-      title: {
-        display: true,
-        text: '骨密度 (mg/cc)',
-        font: {
-          size: 12,
-        },
-        padding: { bottom: 10 },
-      },
-      min: 0,
-      max: 200,
-      grid: {
-        color: '#E5E7EB',
-        drawBorder: true,
-      },
-      ticks: {
-        padding: 5,
-        font: {
-          size: 11,
-        },
-        stepSize: 50,
-      },
-    },
-    x: {
-      title: {
-        display: true,
-        text: '年龄',
-        font: {
-          size: 12,
-        },
-        padding: { top: 10 },
-      },
-      grid: {
-        color: '#E5E7EB',
-        drawBorder: true,
-      },
-      ticks: {
-        padding: 5,
-        font: {
-          size: 11,
-        },
-      },
-    },
-  },
-};
-
-// 修改图表配置
-const chartOptions = {
   responsive: true,
   maintainAspectRatio: true,
   aspectRatio: 1.6,

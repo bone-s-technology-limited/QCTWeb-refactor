@@ -46,7 +46,7 @@ const toolbarButtons: Button[] = [
     id: 'AISegmentation',
     uiType: 'ohif.radioGroup',
     props: {
-      icon: 'clipboard',
+      icon: 'icon-tool-cobb-angle',
       label: 'AI分割',
       tooltip: 'AI Segmentation',
       commands: [

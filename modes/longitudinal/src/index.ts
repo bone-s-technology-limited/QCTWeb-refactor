@@ -58,11 +58,6 @@ const dicomRT = {
   sopClassHandler: '@ohif/extension-cornerstone-dicom-rt.sopClassHandlerModule.dicom-rt',
 };
 
-// AI Segmentation extension (placeholder for future implementation)
-const aiSegmentation = {
-  // This would be added when the actual extension is created
-};
-
 const extensionDependencies = {
   // Can derive the versions at least process.env.from npm_package_version
   '@ohif/extension-default': '^3.0.0',
@@ -99,13 +94,12 @@ function modeFactory({ modeConfiguration }) {
         panelService,
         segmentationService,
         uiDialogService,
-        uiModalService, // 使用模态对话框服务
+        uiModalService,
         uiNotificationService,
       } = servicesManager.services;
 
-      const contextName = 'VIEWER'; // 改为大写，与toolbarButtons.ts一致
+      const contextName = 'VIEWER';
 
-      // 首先创建上下文（如果不存在）
       commandsManager.createContext(contextName);
 
       // 修改注册命令，使用模态对话框服务而不是uiDialogService
@@ -125,7 +119,7 @@ function modeFactory({ modeConfiguration }) {
                 // 显示成功通知
                 uiNotificationService.show({
                   title: 'AI分割',
-                  message: '分割文件上传成功！请等待系统加载分割结果。',
+                  message: '分割文件上传成功！请刷新页面加载分割结果。',
                   type: 'success',
                   duration: 5000,
                 });
@@ -303,8 +297,7 @@ function modeFactory({ modeConfiguration }) {
             props: {
               leftPanels: [tracked.thumbnailList],
               leftPanelResizable: true,
-              rightPanels: [cornerstone.segmentation, tracked.measurements],
-              rightPanelClosed: true,
+              rightPanels: [cornerstone.segmentation],
               rightPanelResizable: true,
               viewports: [
                 {
