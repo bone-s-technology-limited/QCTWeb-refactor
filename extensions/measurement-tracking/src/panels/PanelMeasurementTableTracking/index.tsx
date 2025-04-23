@@ -897,9 +897,9 @@ function PanelMeasurementTableTracking({
               className={`transform rounded-md py-2 px-4 text-center font-medium text-white transition-all duration-200 ${
                 !appConfig?.disableEditing && isVertebraConfirmed && selectedVertebraLocation
                   ? roiModified
-                    ? 'bg-blue-700 hover:bg-blue-800 active:scale-95'
-                    : 'bg-blue-800 hover:bg-blue-900 active:scale-95'
-                  : 'cursor-not-allowed bg-blue-900/60 text-blue-100/70'
+                    ? 'bg-blue-600 hover:bg-blue-700 active:scale-95'
+                    : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
+                  : 'cursor-not-allowed bg-blue-700/70 text-blue-100/80'
               }`}
               onClick={calculateBMD}
               disabled={
@@ -913,8 +913,8 @@ function PanelMeasurementTableTracking({
             <button
               className={`transform rounded-md py-2 px-4 text-center font-medium text-white transition-all duration-200 ${
                 !appConfig?.disableEditing && bmdResults && !roiModified
-                  ? 'bg-blue-800 hover:bg-blue-900 active:scale-95'
-                  : 'cursor-not-allowed bg-blue-900/60 text-blue-100/70'
+                  ? 'bg-blue-600 hover:bg-blue-700 active:scale-95'
+                  : 'cursor-not-allowed bg-blue-700/70 text-blue-100/80'
               }`}
               onClick={handleCreateReport}
               disabled={appConfig?.disableEditing || !bmdResults || roiModified}
@@ -925,7 +925,7 @@ function PanelMeasurementTableTracking({
 
           {/* 第二行：查看历史报告单独一行 */}
           <button
-            className="transform rounded-md bg-blue-800 py-2 px-4 text-center font-medium text-white transition-all duration-200 hover:bg-blue-900 active:scale-95"
+            className="transform rounded-md bg-blue-600 py-2 px-4 text-center font-medium text-white transition-all duration-200 hover:bg-blue-700 active:scale-95"
             onClick={handleViewHistoricalReports}
           >
             查看历史骨密度报告
