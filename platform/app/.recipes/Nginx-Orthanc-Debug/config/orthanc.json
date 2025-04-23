@@ -8,6 +8,10 @@
   "LuaScripts": [],
   "Plugins": ["/usr/share/orthanc/plugins", "/usr/local/share/orthanc/plugins"],
   "ConcurrentJobs": 8,
+  // CORS settings - crucial for web apps
+  "CorsEnabled": true,
+  "CorsAllowedOrigins": ["*"], // Or specific origins like "http://localhost:3000"
+  "CorsAllowCredentials": true,
   "HttpServerEnabled": true,
   // "HttpsServerEnabled": true,
   // "HttpsCertificateFile": "/etc/orthanc/ssl/nginx.crt",
@@ -31,10 +35,14 @@
   "RleTransferSyntaxAccepted": true,
   "UnknownSopClassAccepted": false,
   "DicomScpTimeout": 30,
+  // Important for the PDF tools
+  "DicomAlwaysAllowFind": true,
+  "DicomAlwaysAllowMove": true,
+  "DicomAlwaysAllowGet": true,
 
   "RemoteAccessAllowed": true,
   "SslEnabled": false,
-  "AuthenticationEnabled": true,
+  "AuthenticationEnabled": false,
   "RegisteredUsers": {
     "bones": "bones123"
   },

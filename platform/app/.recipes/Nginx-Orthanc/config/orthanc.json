@@ -34,7 +34,7 @@
 
   "RemoteAccessAllowed": true,
   "SslEnabled": false,
-  "AuthenticationEnabled": true,
+  "AuthenticationEnabled": false,
   "RegisteredUsers": {
     "bones": "bones123"
   },

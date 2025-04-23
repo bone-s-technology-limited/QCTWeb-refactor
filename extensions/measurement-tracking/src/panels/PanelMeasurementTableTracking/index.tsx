@@ -735,6 +735,45 @@ function PanelMeasurementTableTracking({
     }
   };
 
+  // 更新：处理查看历史报告的函数 - 从URL获取StudyInstanceUID
+  const handleViewHistoricalReports = () => {
+    try {
+      // 尝试从URL获取StudyInstanceUID
+      let StudyInstanceUID = '';
+
+      // 方法1: 从URL查询参数获取
+      const urlParams = new URLSearchParams(window.location.search);
+      const studyIDFromURL = urlParams.get('StudyInstanceUIDs');
+
+      // 方法2: 从trackedStudy获取
+      const studyIDFromTracked = trackedStudy;
+
+      // 优先使用URL中的ID，如果没有则使用trackedStudy
+      StudyInstanceUID = studyIDFromURL || studyIDFromTracked;
+
+      if (!StudyInstanceUID) {
+        console.error('无法获取StudyInstanceUID');
+        setBmdError('无法获取研究ID，请确保已加载影像');
+        setTimeout(() => {
+          setBmdError(null);
+        }, 3000);
+        return;
+      }
+
+      console.log('Redirecting to historical report with StudyInstanceUID:', StudyInstanceUID);
+
+      // 构建URL并在新标签页中打开
+      const viewerUrl = `https://106.55.225.253/pacs/stone-webviewer/index.html?study=${StudyInstanceUID}`;
+      window.open(viewerUrl, '_blank');
+    } catch (error) {
+      console.error('访问历史报告时发生错误:', error);
+      setBmdError(error instanceof Error ? error.message : '无法访问历史报告');
+      setTimeout(() => {
+        setBmdError(null);
+      }, 3000);
+    }
+  };
+
   // 添加CSS动画
   const animationStyles = `
     @keyframes fadeIn {
@@ -745,9 +784,6 @@ function PanelMeasurementTableTracking({
       animation: fadeIn 0.3s ease-out forwards;
     }
   `;
-
-  // I'm focusing on the render function part of the component that needs to be changed
-  // This will replace the return statement in your PanelMeasurementTableTracking function
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -850,28 +886,52 @@ function PanelMeasurementTableTracking({
         </div>
       </div>
 
-      {/* 固定的底部操作按钮区域 */}
-      {!appConfig?.disableEditing && (
-        <div className="bg-primary-dark flex-none border-t border-gray-800 p-4">
-          <ActionButtons
-            t={t}
-            actions={[
-              {
-                label: '更新计算结果',
-                onClick: calculateBMD,
-                disabled: !isVertebraConfirmed || !selectedVertebraLocation,
-                // 如果ROI已修改，使用高亮的样式吸引用户注意
-                className: roiModified ? 'bg-blue-500 hover:bg-blue-600' : '',
-              },
-              {
-                label: '生成报告',
-                onClick: handleCreateReport,
-                disabled: !bmdResults || roiModified,
-              },
-            ]}
-          />
+      {/* 固定的底部操作按钮区域 - 现代化设计 */}
+      <div className="bg-primary-dark flex-none border-t border-gray-800 p-4">
+        {/* 自定义按钮布局 - 前两个按钮一行，查看历史报告单独一行 */}
+        <div className="flex flex-col space-y-2">
+          {/* 第一行：更新计算结果和生成报告并排 */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* 更新计算结果按钮 */}
+            <button
+              className={`transform rounded-md py-2 px-4 text-center font-medium text-white transition-all duration-200 ${
+                !appConfig?.disableEditing && isVertebraConfirmed && selectedVertebraLocation
+                  ? roiModified
+                    ? 'bg-blue-700 hover:bg-blue-800 active:scale-95'
+                    : 'bg-blue-800 hover:bg-blue-900 active:scale-95'
+                  : 'cursor-not-allowed bg-blue-900/60 text-blue-100/70'
+              }`}
+              onClick={calculateBMD}
+              disabled={
+                appConfig?.disableEditing || !isVertebraConfirmed || !selectedVertebraLocation
+              }
+            >
+              更新计算结果
+            </button>
+
+            {/* 生成报告按钮 */}
+            <button
+              className={`transform rounded-md py-2 px-4 text-center font-medium text-white transition-all duration-200 ${
+                !appConfig?.disableEditing && bmdResults && !roiModified
+                  ? 'bg-blue-800 hover:bg-blue-900 active:scale-95'
+                  : 'cursor-not-allowed bg-blue-900/60 text-blue-100/70'
+              }`}
+              onClick={handleCreateReport}
+              disabled={appConfig?.disableEditing || !bmdResults || roiModified}
+            >
+              生成报告
+            </button>
+          </div>
+
+          {/* 第二行：查看历史报告单独一行 */}
+          <button
+            className="transform rounded-md bg-blue-800 py-2 px-4 text-center font-medium text-white transition-all duration-200 hover:bg-blue-900 active:scale-95"
+            onClick={handleViewHistoricalReports}
+          >
+            查看历史骨密度报告
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

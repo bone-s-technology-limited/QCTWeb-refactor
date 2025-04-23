@@ -18,6 +18,8 @@ WORKDIR /usr/src/app
 COPY ./ /usr/src/app/
 
 # Install node dependencies
+ENV SHARP_BINARY_HOST=https://npmmirror.com/mirrors/sharp
+ENV SHARP_LIBVIPS_BINARY_HOST=https://npmmirror.com/mirrors/sharp-libvips
 RUN yarn config set workspaces-experimental true
 RUN yarn install
 
