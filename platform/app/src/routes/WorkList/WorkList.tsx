@@ -159,6 +159,37 @@ function WorkList({
     });
   };
 
+  // 新增：检查study是否包含DOC类型的series
+  const hasDocSeries = studyInstanceUid => {
+    if (!seriesInStudiesMap.has(studyInstanceUid)) {
+      return false;
+    }
+
+    const seriesList = seriesInStudiesMap.get(studyInstanceUid);
+    return seriesList.some(series => {
+      // 检查series是否为DOC类型 - 可能需要根据实际数据结构调整
+      return (
+        series.modality === 'DOC' ||
+        series.description?.includes('DOC') ||
+        series.description?.includes('Report')
+      );
+    });
+  };
+
+  // 处理查看骨密度报告的函数
+  const handleViewBoneReport = studyInstanceUid => {
+    if (!studyInstanceUid || !hasDocSeries(studyInstanceUid)) {
+      console.error('无法获取StudyInstanceUID或该检查没有骨密度报告');
+      return;
+    }
+
+    console.log('打开骨密度报告，StudyInstanceUID:', studyInstanceUid);
+
+    // 构建URL并在新标签页中打开
+    const viewerUrl = `https://106.55.225.253/pacs/stone-webviewer/index.html?study=${studyInstanceUid}`;
+    window.open(viewerUrl, '_blank');
+  };
+
   // Set body style
   useEffect(() => {
     document.body.classList.add('bg-black');
@@ -431,6 +462,35 @@ function WorkList({
                 )
               );
             })}
+
+            {/* 查看骨密度报告按钮 - 根据是否有DOC类型series决定样式和行为 */}
+            <Button
+              type={ButtonEnums.type.secondary}
+              size={ButtonEnums.size.medium}
+              startIcon={
+                <Icon
+                  className={`!h-[20px] !w-[20px] ${hasDocSeries(studyInstanceUid) ? 'text-black' : 'text-gray-500'}`}
+                  name="launch-arrow"
+                />
+              }
+              onClick={() => handleViewBoneReport(studyInstanceUid)}
+              disabled={!hasDocSeries(studyInstanceUid)}
+              startIconTooltip={
+                !hasDocSeries(studyInstanceUid) ? (
+                  <div className="font-inter flex w-[206px] whitespace-normal text-left text-xs font-normal text-white">
+                    暂不可用：该检查未包含骨密度报告
+                  </div>
+                ) : null
+              }
+              dataCY={`bone-report-${studyInstanceUid}`}
+              className={
+                hasDocSeries(studyInstanceUid)
+                  ? 'bg-green-600 text-[13px] hover:bg-green-700'
+                  : 'cursor-not-allowed bg-[#222d44] text-[13px]'
+              }
+            >
+              查看骨密度报告
+            </Button>
           </div>
         </StudyListExpandedRow>
       ),
