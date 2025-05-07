@@ -37,6 +37,7 @@ import StudyBrowser from './StudyBrowser';
 import StudyItem from './StudyItem';
 import StudyListExpandedRow from './StudyListExpandedRow';
 import StudyListFilter from './StudyListFilter';
+import ReportListFilter from './ReportListFilter';
 import StudyListPagination from './StudyListPagination';
 import { StudyListTable, StudyListTableRow } from './StudyListTable';
 import StudySummary from './StudySummary';
@@ -158,6 +159,7 @@ export {
   StudyItem,
   StudyListExpandedRow,
   StudyListFilter,
+  ReportListFilter,
   StudyListPagination,
   StudyListTable,
   StudyListTableRow,

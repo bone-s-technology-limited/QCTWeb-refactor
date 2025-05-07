@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@ohif/ui';
 // Route Components
 import DataSourceWrapper from './DataSourceWrapper';
 import WorkList from './WorkList';
+import ReportList from './ReportList'; // 导入ReportList组件
 import Local from './Local';
 import Debug from './Debug';
 import NotFound from './NotFound';
@@ -88,6 +89,7 @@ const createRoutes = ({
   hotkeysManager,
   routerBasename,
   showStudyList,
+  showReportList = true, // 添加控制报告列表显示的配置项，默认为true
 }: withAppTypes) => {
   const routes =
     buildModeRoutes({
@@ -108,10 +110,27 @@ const createRoutes = ({
     props: { children: WorkList, servicesManager, extensionManager },
   };
 
+  // 添加报告中心路由
+  const ReportListRoute = {
+    path: '/reports',
+    children: DataSourceWrapper,
+    private: true,
+    props: { children: ReportList, servicesManager, extensionManager },
+  };
+
+  // 添加报告编辑路由（如果需要）
+  const ReportEditRoute = {
+    path: '/reports/edit/:reportId',
+    children: DataSourceWrapper,
+    private: true,
+    props: { children: ReportList, servicesManager, extensionManager, showDetail: true },
+  };
+
   const customRoutes = customizationService.getGlobalCustomization('customRoutes');
   const allRoutes = [
     ...routes,
     ...(showStudyList ? [WorkListRoute] : []),
+    ...(showReportList ? [ReportListRoute, ReportEditRoute] : []), // 添加报告中心相关路由
     ...(customRoutes?.routes || []),
     ...bakedInRoutes,
     customRoutes?.notFoundRoute || notFoundRoute,

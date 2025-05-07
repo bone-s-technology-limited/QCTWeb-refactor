@@ -92,6 +92,7 @@ export {
   StudyItem,
   StudyListExpandedRow,
   StudyListFilter,
+  ReportListFilter,
   StudyListPagination,
   StudyListTable,
   StudyListTableRow,
